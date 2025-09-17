@@ -7,6 +7,8 @@ import DashboardLayout from "./components/layout/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import GlobalTables from "./pages/GlobalTables";
+import Testing from "./pages/Testing";
+import Analytics from "./pages/Analytics";
 import Aggregation from "./pages/Aggregation";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -24,6 +26,8 @@ const App = () => (
             <Route index element={<Dashboard />} />
             <Route path="clients" element={<Clients />} />
             <Route path="global-tables" element={<GlobalTables />} />
+            <Route path="testing" element={<Testing />} />
+            <Route path="analytics" element={<Analytics />} />
             <Route path="aggregation" element={<Aggregation />} />
             <Route path="settings" element={<Settings />} />
           </Route>

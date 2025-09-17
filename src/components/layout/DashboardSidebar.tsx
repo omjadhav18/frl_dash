@@ -6,6 +6,8 @@ import {
   GitMerge,
   Settings,
   Brain,
+  TestTube,
+  TrendingUp,
 } from "lucide-react";
 
 import {
@@ -24,6 +26,8 @@ const navigation = [
   { title: "Dashboard", url: "/", icon: BarChart3 },
   { title: "Clients", url: "/clients", icon: Users },
   { title: "Global Q-Tables", url: "/global-tables", icon: Database },
+  { title: "Testing", url: "/testing", icon: TestTube },
+  { title: "Analytics", url: "/analytics", icon: TrendingUp },
   { title: "Aggregation", url: "/aggregation", icon: GitMerge },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
