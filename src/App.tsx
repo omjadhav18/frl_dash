@@ -9,8 +9,11 @@ import Clients from "./pages/Clients";
 import GlobalTables from "./pages/GlobalTables";
 import Testing from "./pages/Testing";
 import Analytics from "./pages/Analytics";
+import Team from "./pages/Team";
 import Aggregation from "./pages/Aggregation";
 import Settings from "./pages/Settings";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,12 +25,18 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Auth Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* Dashboard Routes */}
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="clients" element={<Clients />} />
             <Route path="global-tables" element={<GlobalTables />} />
             <Route path="testing" element={<Testing />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="team" element={<Team />} />
             <Route path="aggregation" element={<Aggregation />} />
             <Route path="settings" element={<Settings />} />
           </Route>

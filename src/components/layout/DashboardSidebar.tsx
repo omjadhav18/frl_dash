@@ -8,6 +8,7 @@ import {
   Brain,
   TestTube,
   TrendingUp,
+  UserCheck,
 } from "lucide-react";
 
 import {
@@ -28,6 +29,7 @@ const navigation = [
   { title: "Global Q-Tables", url: "/global-tables", icon: Database },
   { title: "Testing", url: "/testing", icon: TestTube },
   { title: "Analytics", url: "/analytics", icon: TrendingUp },
+  { title: "Team", url: "/team", icon: UserCheck },
   { title: "Aggregation", url: "/aggregation", icon: GitMerge },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
