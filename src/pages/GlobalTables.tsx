@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Eye, Download, Calendar } from "lucide-react";
+import { useState, useRef } from "react";
+import { Eye, Download, Calendar, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +20,19 @@ import {
 
 const GlobalTables = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      console.log("Q-Table file selected:", file.name);
+      // Frontend only - backend upload logic will be added later
+    }
+  };
   
   // Mock data - replace with real API calls
   const globalTables = [
@@ -91,10 +104,27 @@ const GlobalTables = () => {
             Aggregated Q-tables from federated learning processes
           </p>
         </div>
-        <Button className="gradient-primary text-white shadow-glow hover:shadow-strong transition-smooth">
-          <Download className="mr-2 h-4 w-4" />
-          Export Latest
-        </Button>
+        <div className="flex gap-3">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".json,.csv,.pkl"
+            className="hidden"
+          />
+          <Button 
+            variant="outline" 
+            className="border-primary text-primary hover:bg-primary/10 transition-smooth"
+            onClick={handleUploadClick}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Upload Q-Table
+          </Button>
+          <Button className="gradient-primary text-white shadow-glow hover:shadow-strong transition-smooth">
+            <Download className="mr-2 h-4 w-4" />
+            Export Latest
+          </Button>
+        </div>
       </div>
 
       {/* Search */}

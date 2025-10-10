@@ -25,6 +25,16 @@ export function DashboardHeader() {
         </div>
       </div>
 
+      {/* Action Buttons */}
+      <div className="flex items-center gap-3">
+        <Button className="gradient-primary text-white shadow-glow hover:shadow-strong transition-smooth">
+          Start Demo
+        </Button>
+        <Button variant="outline" className="border-primary text-primary hover:bg-primary/10 transition-smooth">
+          Start Training
+        </Button>
+      </div>
+
       <div className="flex items-center gap-3">
         {/* Notifications */}
         <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
