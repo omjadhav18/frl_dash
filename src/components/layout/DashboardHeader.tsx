@@ -52,7 +52,10 @@ export function DashboardHeader() {
             <DropdownMenuItem className="hover:bg-accent hover:text-accent-foreground transition-quick">
               Settings
             </DropdownMenuItem>
-            <DropdownMenuItem className="hover:bg-destructive hover:text-destructive-foreground transition-quick">
+          <DropdownMenuItem 
+              className="hover:bg-destructive hover:text-destructive-foreground transition-quick"
+              onClick={() => window.location.href = '/login'}
+            >
               Logout
             </DropdownMenuItem>
           </DropdownMenuContent>

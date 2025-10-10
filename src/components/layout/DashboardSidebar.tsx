@@ -51,15 +51,15 @@ export function DashboardSidebar() {
         {/* Logo Section */}
         <div className="p-6 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg gradient-primary shadow-glow">
+            <div className="p-2 rounded-lg gradient-primary shadow-glow flex-shrink-0">
               <Brain className="h-6 w-6 text-white" />
             </div>
             {state === "expanded" && (
-              <div>
-                <h1 className="text-lg font-bold text-sidebar-foreground">
+              <div className="overflow-hidden">
+                <h1 className="text-lg font-bold text-sidebar-foreground whitespace-nowrap">
                   FedRL Dashboard
                 </h1>
-                <p className="text-xs text-sidebar-foreground/60">
+                <p className="text-xs text-sidebar-foreground/60 whitespace-nowrap">
                   Federated Learning
                 </p>
               </div>
