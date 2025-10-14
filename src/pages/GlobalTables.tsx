@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Eye, Download, Calendar, Upload } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Eye, Download, Calendar, RefreshCw, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,82 +17,114 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import apiInstance from "@/utils/axios";
+
+interface GlobalQTable {
+  id: string;
+  q_table: Record<string, Record<string, number>>;
+  aggregated_at: string;
+  performance_score: number;
+}
 
 const GlobalTables = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [globalTables, setGlobalTables] = useState<GlobalQTable[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [evaluating, setEvaluating] = useState(false);
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
+  useEffect(() => {
+    fetchGlobalQTables();
+  }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      console.log("Q-Table file selected:", file.name);
-      // Frontend only - backend upload logic will be added later
+  const fetchGlobalQTables = async () => {
+    setLoading(true);
+    try {
+      const { data } = await apiInstance.get("/federated/global-qtables/");
+      setGlobalTables(data);
+    } catch (error) {
+      console.error("Failed to fetch global Q-Tables:", error);
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Mock data - replace with real API calls
-  const globalTables = [
-    {
-      globalId: "GQ-2024-001",
-      aggregatedDate: "2024-01-15 15:45:22",
-      performanceScore: 0.947,
-      clientsAggregated: 12,
-      modelVersion: "v2.4.1",
-    },
-    {
-      globalId: "GQ-2024-002",
-      aggregatedDate: "2024-01-14 18:30:15",
-      performanceScore: 0.923,
-      clientsAggregated: 8,
-      modelVersion: "v2.4.0",
-    },
-    {
-      globalId: "GQ-2024-003",
-      aggregatedDate: "2024-01-13 12:22:08",
-      performanceScore: 0.915,
-      clientsAggregated: 15,
-      modelVersion: "v2.3.9",
-    },
-    {
-      globalId: "GQ-2024-004",
-      aggregatedDate: "2024-01-12 09:15:33",
-      performanceScore: 0.901,
-      clientsAggregated: 10,
-      modelVersion: "v2.3.8",
-    },
-  ];
 
-  const mockGlobalQTable = {
-    states: ["State_0", "State_1", "State_2", "State_3", "State_4"],
-    actions: ["Action_0", "Action_1", "Action_2", "Action_3"],
-    values: [
-      [0.89, 0.76, 0.82, 0.71],
-      [0.93, 0.84, 0.78, 0.85],
-      [0.87, 0.91, 0.88, 0.79],
-      [0.82, 0.77, 0.94, 0.86],
-      [0.76, 0.83, 0.81, 0.92],
-    ],
-    metadata: {
-      aggregationMethod: "Weighted Average",
-      totalClients: 12,
-      convergenceScore: 0.94,
+  const handleEvaluatePerformance = async () => {
+    setEvaluating(true);
+    try {
+      const response = await apiInstance.post("/federated/evaluate/global-qtables/");
+      console.log("Evaluation response:", response.data);
+      // Refresh the tables after evaluation
+      await fetchGlobalQTables();
+    } catch (error) {
+      console.error("Failed to evaluate global Q-Tables:", error);
+    } finally {
+      setEvaluating(false);
+    }
+  };
+
+  // Parse q_table object to structured format
+  const parseQTable = (qTableObj: Record<string, Record<string, number>>) => {
+    try {
+      const statesSet = new Set<string>();
+      const actionsSet = new Set<string>();
+      
+      Object.keys(qTableObj).forEach((key) => {
+        const [state, action] = key.replace(/[()]/g, "").split(",").map((x) => x.trim());
+        statesSet.add(state);
+        actionsSet.add(action);
+      });
+      
+      const states = Array.from(statesSet).sort((a, b) => Number(a) - Number(b));
+      const actions = Array.from(actionsSet).sort((a, b) => Number(a) - Number(b));
+      
+      // Get all inner action keys (the nested "0", "1", etc.)
+      const innerActionsSet = new Set<string>();
+      Object.values(qTableObj).forEach((innerObj) => {
+        Object.keys(innerObj).forEach((innerKey) => innerActionsSet.add(innerKey));
+      });
+      const innerActions = Array.from(innerActionsSet).sort((a, b) => Number(a) - Number(b));
+      
+      // Build nested structure: state -> action -> innerAction -> value
+      const qTableData: Record<string, Record<string, Record<string, number>>> = {};
+      
+      states.forEach((state) => {
+        qTableData[state] = {};
+        actions.forEach((action) => {
+          qTableData[state][action] = {};
+          const key = `(${state}, ${action})`;
+          if (qTableObj[key]) {
+            innerActions.forEach((innerAction) => {
+              qTableData[state][action][innerAction] = qTableObj[key][innerAction] || 0;
+            });
+          }
+        });
+      });
+      
+      return { states, actions, innerActions, qTableData };
+    } catch (error) {
+      console.error("Failed to parse Q-Table:", error);
+      return { states: [], actions: [], innerActions: [], qTableData: {} };
     }
   };
 
   const filteredTables = globalTables.filter((table) =>
-    table.globalId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    table.modelVersion.toLowerCase().includes(searchTerm.toLowerCase())
+    table.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getPerformanceColor = (score: number) => {
-    if (score >= 0.9) return "text-success font-medium";
-    if (score >= 0.8) return "text-warning font-medium";
+    if (score >= 90) return "text-success font-medium";
+    if (score >= 80) return "text-warning font-medium";
     return "text-destructive font-medium";
   };
+
+  // Calculate statistics
+  const bestPerformance = globalTables.length > 0 
+    ? Math.max(...globalTables.map(t => t.performance_score))
+    : 0;
+  
+  const avgPerformance = globalTables.length > 0
+    ? globalTables.reduce((sum, t) => sum + t.performance_score, 0) / globalTables.length
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -105,20 +137,22 @@ const GlobalTables = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept=".json,.csv,.pkl"
-            className="hidden"
-          />
           <Button 
             variant="outline" 
             className="border-primary text-primary hover:bg-primary/10 transition-smooth"
-            onClick={handleUploadClick}
+            onClick={handleEvaluatePerformance}
+            disabled={evaluating}
           >
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Q-Table
+            <Activity className="mr-2 h-4 w-4" />
+            {evaluating ? "Evaluating..." : "Evaluate Performance"}
+          </Button>
+          <Button 
+            variant="outline"
+            className="border-border hover:bg-accent transition-smooth"
+            onClick={fetchGlobalQTables}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
           </Button>
           <Button className="gradient-primary text-white shadow-glow hover:shadow-strong transition-smooth">
             <Download className="mr-2 h-4 w-4" />
@@ -131,7 +165,7 @@ const GlobalTables = () => {
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
           <Input
-            placeholder="Search by Global ID or Model Version..."
+            placeholder="Search by Global ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="border-border focus:border-primary transition-smooth"
@@ -145,7 +179,9 @@ const GlobalTables = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Best Performance</p>
-              <p className="text-2xl font-bold text-success">94.7%</p>
+              <p className="text-2xl font-bold text-success">
+                {bestPerformance.toFixed(1)}%
+              </p>
             </div>
             <div className="p-2 rounded-lg bg-success/10">
               <Calendar className="h-4 w-4 text-success" />
@@ -156,7 +192,9 @@ const GlobalTables = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Average Performance</p>
-              <p className="text-2xl font-bold text-foreground">92.1%</p>
+              <p className="text-2xl font-bold text-foreground">
+                {avgPerformance.toFixed(1)}%
+              </p>
             </div>
             <div className="p-2 rounded-lg bg-primary/10">
               <Calendar className="h-4 w-4 text-primary" />
@@ -184,25 +222,23 @@ const GlobalTables = () => {
               <TableHead className="font-semibold text-foreground">Global ID</TableHead>
               <TableHead className="font-semibold text-foreground">Aggregated Date</TableHead>
               <TableHead className="font-semibold text-foreground">Performance Score</TableHead>
-              <TableHead className="font-semibold text-foreground">Clients</TableHead>
-              <TableHead className="font-semibold text-foreground">Model Version</TableHead>
               <TableHead className="font-semibold text-foreground">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTables.map((table, index) => (
-              <TableRow key={index} className="hover:bg-muted/20 transition-quick">
-                <TableCell className="font-medium text-primary">{table.globalId}</TableCell>
-                <TableCell className="text-sm">{table.aggregatedDate}</TableCell>
+            {filteredTables.map((table) => (
+              <TableRow key={table.id} className="hover:bg-muted/20 transition-quick">
+                <TableCell className="font-medium text-primary font-mono text-sm">
+                  {table.id.slice(0, 8)}...
+                </TableCell>
+                <TableCell className="text-sm">
+                  {new Date(table.aggregated_at).toLocaleString()}
+                </TableCell>
                 <TableCell>
-                  <span className={getPerformanceColor(table.performanceScore)}>
-                    {(table.performanceScore * 100).toFixed(1)}%
+                  <span className={getPerformanceColor(table.performance_score)}>
+                    {table.performance_score.toFixed(1)}%
                   </span>
                 </TableCell>
-                <TableCell>
-                  <span className="font-medium">{table.clientsAggregated}</span>
-                </TableCell>
-                <TableCell className="font-mono text-sm">{table.modelVersion}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
                     <Dialog>
@@ -219,61 +255,89 @@ const GlobalTables = () => {
                       <DialogContent className="max-w-5xl bg-popover border-border">
                         <DialogHeader>
                           <DialogTitle className="text-foreground">
-                            Global Q-Table: {table.globalId}
+                            Global Q-Table: {table.id.slice(0, 8)}
                           </DialogTitle>
                         </DialogHeader>
                         <div className="space-y-6">
                           {/* Metadata */}
-                          <div className="grid gap-4 md:grid-cols-3">
+                          <div className="grid gap-4 md:grid-cols-2">
                             <div className="bg-muted/30 p-3 rounded-lg">
-                              <p className="text-sm font-medium text-muted-foreground">Aggregation Method</p>
-                              <p className="font-semibold">{mockGlobalQTable.metadata.aggregationMethod}</p>
+                              <p className="text-sm font-medium text-muted-foreground">Aggregated At</p>
+                              <p className="font-semibold">
+                                {new Date(table.aggregated_at).toLocaleString()}
+                              </p>
                             </div>
                             <div className="bg-muted/30 p-3 rounded-lg">
-                              <p className="text-sm font-medium text-muted-foreground">Total Clients</p>
-                              <p className="font-semibold">{mockGlobalQTable.metadata.totalClients}</p>
-                            </div>
-                            <div className="bg-muted/30 p-3 rounded-lg">
-                              <p className="text-sm font-medium text-muted-foreground">Convergence Score</p>
-                              <p className="font-semibold text-success">
-                                {(mockGlobalQTable.metadata.convergenceScore * 100).toFixed(1)}%
+                              <p className="text-sm font-medium text-muted-foreground">Performance Score</p>
+                              <p className={`font-semibold ${getPerformanceColor(table.performance_score)}`}>
+                                {table.performance_score.toFixed(1)}%
                               </p>
                             </div>
                           </div>
                           
                           {/* Q-Table */}
-                          <div className="overflow-auto">
-                            <table className="w-full border-collapse">
-                              <thead>
-                                <tr>
-                                  <th className="border border-border p-3 bg-muted text-left text-sm font-medium">
-                                    State / Action
-                                  </th>
-                                  {mockGlobalQTable.actions.map((action) => (
-                                    <th key={action} className="border border-border p-3 bg-muted text-center text-sm font-medium">
-                                      {action}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {mockGlobalQTable.states.map((state, stateIndex) => (
-                                  <tr key={state}>
-                                    <td className="border border-border p-3 bg-muted/30 font-medium text-sm">
-                                      {state}
-                                    </td>
-                                    {mockGlobalQTable.values[stateIndex].map((value, actionIndex) => (
-                                      <td key={actionIndex} className="border border-border p-3 text-center">
-                                        <span className={`font-mono text-sm ${getPerformanceColor(value)}`}>
-                                          {value.toFixed(3)}
-                                        </span>
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                          {table.q_table ? (
+                            (() => {
+                              const parsedQ = parseQTable(table.q_table);
+                              return (
+                                <div className="overflow-auto max-h-[500px]">
+                                  <table className="w-full border-collapse">
+                                    <thead className="sticky top-0 bg-background z-10">
+                                      <tr>
+                                        <th className="border border-border p-3 bg-muted text-left text-sm font-semibold" rowSpan={2}>
+                                          State
+                                        </th>
+                                        {parsedQ.actions.map((action) => (
+                                          <th
+                                            key={action}
+                                            className="border border-border p-3 bg-muted text-center text-sm font-semibold"
+                                            colSpan={parsedQ.innerActions.length}
+                                          >
+                                            Action {action}
+                                          </th>
+                                        ))}
+                                      </tr>
+                                      <tr>
+                                        {parsedQ.actions.map((action) => (
+                                          parsedQ.innerActions.map((innerAction) => (
+                                            <th
+                                              key={`${action}-${innerAction}`}
+                                              className="border border-border p-2 bg-muted/70 text-center text-xs font-medium"
+                                            >
+                                              Q[{innerAction}]
+                                            </th>
+                                          ))
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {parsedQ.states.map((state) => (
+                                        <tr key={state} className="hover:bg-muted/10">
+                                          <td className="border border-border p-3 bg-muted/30 font-semibold text-sm">
+                                            State {state}
+                                          </td>
+                                          {parsedQ.actions.map((action) => (
+                                            parsedQ.innerActions.map((innerAction) => (
+                                              <td
+                                                key={`${state}-${action}-${innerAction}`}
+                                                className="border border-border p-2 text-center text-sm"
+                                              >
+                                                <span className="font-mono text-xs">
+                                                  {parsedQ.qTableData[state]?.[action]?.[innerAction]?.toFixed(3) || '0.000'}
+                                                </span>
+                                              </td>
+                                            ))
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <p className="text-muted-foreground">No Q-Table available</p>
+                          )}
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -293,9 +357,15 @@ const GlobalTables = () => {
         </Table>
       </div>
 
-      {filteredTables.length === 0 && (
+      {filteredTables.length === 0 && !loading && (
         <div className="text-center py-8">
           <p className="text-muted-foreground">No global Q-tables found matching your criteria.</p>
+        </div>
+      )}
+
+      {loading && (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       )}
     </div>

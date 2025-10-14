@@ -1,31 +1,56 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Brain, Eye, EyeOff } from "lucide-react";
+import { login } from "@/utils/auth"; // ✅ Import login function
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
+  const navigate = useNavigate();
+
+  // ------------------ Input Handler ------------------
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ------------------ Submit Handler ------------------
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Frontend only - no backend logic
-    console.log("Login attempted with:", formData);
+
+    const { email, password } = formData;
+    if (!email || !password) return;
+
+    setIsLoading(true);
+
+    try {
+      const response = await login(email, password);
+
+      if (response.data && !response.error) {
+        // ✅ Login successful
+        navigate("/"); // redirect to admin dashboard or change as needed
+      } else {
+        console.error("Login failed:", response.error);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // ------------------ UI ------------------
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background/95 to-primary/5 p-4">
       <Card className="w-full max-w-md shadow-elegant">
@@ -40,9 +65,10 @@ const Login = () => {
             </CardDescription>
           </div>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -53,9 +79,11 @@ const Login = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
+                disabled={isLoading}
               />
             </div>
-            
+
+            {/* Password */}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -67,6 +95,7 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   required
+                  disabled={isLoading}
                 />
                 <Button
                   type="button"
@@ -74,6 +103,7 @@ const Login = () => {
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -84,17 +114,23 @@ const Login = () => {
               </div>
             </div>
 
-            <Button type="submit" className="w-full gradient-primary text-white">
-              Sign In
+            {/* Submit */}
+            <Button
+              type="submit"
+              className="w-full gradient-primary text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing In..." : "Sign In"}
             </Button>
           </form>
 
+          {/* Links */}
           <div className="text-center space-y-2">
             <Link to="/forgot-password" className="text-sm text-primary hover:underline">
               Forgot your password?
             </Link>
             <p className="text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Don’t have an account?{" "}
               <Link to="/register" className="text-primary hover:underline font-medium">
                 Sign up
               </Link>

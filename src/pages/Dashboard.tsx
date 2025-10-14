@@ -1,36 +1,68 @@
+import { useState, useEffect } from "react";
 import { Users, PlayCircle, Database, TrendingUp } from "lucide-react";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import apiInstance from "@/utils/axios";
+
+interface SummaryCounts {
+  federated_runs: number;
+  client_qtables: number;
+  global_qtables: number;
+  test_results: number;
+}
 
 const Dashboard = () => {
-  // Mock data - replace with real API calls
+  const [counts, setCounts] = useState<SummaryCounts>({
+    federated_runs: 0,
+    client_qtables: 0,
+    global_qtables: 0,
+    test_results: 0,
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchSummaryCounts();
+  }, []);
+
+  const fetchSummaryCounts = async () => {
+    setLoading(true);
+    try {
+      const { data } = await apiInstance.get("/federated/summary/counts/");
+      setCounts(data);
+    } catch (error) {
+      console.error("Failed to fetch summary counts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const metrics = [
     {
-      title: "Total Clients Connected",
-      value: 24,
-      description: "Active federated clients",
+      title: "Total Federated Runs",
+      value: counts.client_qtables,
+      description: "Federated runs completed count",
       icon: Users,
       trend: { value: 12, isPositive: true },
     },
     {
-      title: "Total Runs Completed",
-      value: 1247,
-      description: "Successful training runs",
+      title: "Client Q-Tables",
+      value: counts.federated_runs,
+      description: "Total Client Q",
       icon: PlayCircle,
       trend: { value: 8, isPositive: true },
     },
     {
       title: "Global Q-Tables Generated",
-      value: 47,
+      value: counts.global_qtables,
       description: "Aggregated models",
       icon: Database,
       trend: { value: 3, isPositive: true },
     },
     {
-      title: "Current Best Performance",
-      value: "94.7%",
-      description: "Latest model accuracy",
+      title: "Test Results Generated",
+      value: counts.test_results,
+      description: "Performance evaluations",
       icon: TrendingUp,
-      trend: { value: 2.1, isPositive: true },
+      trend: { value: 2, isPositive: true },
     },
   ];
 
@@ -45,11 +77,17 @@ const Dashboard = () => {
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((metric, index) => (
-          <MetricCard key={index} {...metric} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Loading metrics...</p>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {metrics.map((metric, index) => (
+            <MetricCard key={index} {...metric} />
+          ))}
+        </div>
+      )}
 
       {/* Additional Dashboard Content */}
       <div className="grid gap-6 md:grid-cols-2">

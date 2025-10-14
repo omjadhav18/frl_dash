@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GitMerge, Play, CheckCircle, XCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,73 +13,69 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import apiInstance from "@/utils/axios";
+
+interface ClientQTable {
+  id: string;
+  client_email: string;
+  run_id: string;
+  q_table: string;
+  uploaded_at: string;
+}
+
+interface GlobalQTable {
+  id: string;
+  q_table: Record<string, Record<string, number>>;
+  aggregated_at: string;
+  performance_score: number;
+}
 
 const Aggregation = () => {
   const [selectedRuns, setSelectedRuns] = useState<string[]>([]);
   const [isAggregating, setIsAggregating] = useState(false);
+  const [availableRuns, setAvailableRuns] = useState<ClientQTable[]>([]);
+  const [recentAggregations, setRecentAggregations] = useState<GlobalQTable[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Mock data - replace with real API calls
-  const availableRuns = [
-    {
-      clientId: "C-001",
-      runId: "550e8400-e29b-41d4-a716-446655440000",
-      timestamp: "2024-01-15 14:30:22",
-      performance: 0.94,
-      status: "ready",
-    },
-    {
-      clientId: "C-002",
-      runId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-      timestamp: "2024-01-15 14:28:15",
-      performance: 0.89,
-      status: "ready",
-    },
-    {
-      clientId: "C-004",
-      runId: "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
-      timestamp: "2024-01-15 14:22:05",
-      performance: 0.91,
-      status: "ready",
-    },
-    {
-      clientId: "C-005",
-      runId: "6ba7b814-9dad-11d1-80b4-00c04fd430c8",
-      timestamp: "2024-01-15 14:18:30",
-      performance: 0.87,
-      status: "ready",
-    },
-  ];
+  useEffect(() => {
+    fetchClientQTables();
+    fetchGlobalQTables();
+  }, []);
 
-  const recentAggregations = [
-    {
-      id: "AGG-001",
-      timestamp: "2024-01-15 15:45:22",
-      status: "completed",
-      clientsIncluded: 12,
-      finalScore: 0.947,
-    },
-    {
-      id: "AGG-002",
-      timestamp: "2024-01-15 12:30:15",
-      status: "completed",
-      clientsIncluded: 8,
-      finalScore: 0.923,
-    },
-    {
-      id: "AGG-003",
-      timestamp: "2024-01-15 09:15:08",
-      status: "failed",
-      clientsIncluded: 5,
-      finalScore: null,
-    },
-  ];
+  const fetchClientQTables = async () => {
+    try {
+      const response = await apiInstance.get("/federated/client-qtables/");
+      setAvailableRuns(response.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch client Q-tables.",
+        variant: "destructive",
+      });
+    }
+  };
 
-  const handleSelectRun = (runId: string) => {
+  const fetchGlobalQTables = async () => {
+    try {
+      const response = await apiInstance.get("/federated/global-qtables/");
+      setRecentAggregations(response.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch global Q-tables.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectRun = (id: string) => {
     setSelectedRuns(prev => 
-      prev.includes(runId) 
-        ? prev.filter(id => id !== runId)
-        : [...prev, runId]
+      prev.includes(id) 
+        ? prev.filter(runId => runId !== id)
+        : [...prev, id]
     );
   };
 
@@ -87,16 +83,15 @@ const Aggregation = () => {
     setSelectedRuns(
       selectedRuns.length === availableRuns.length 
         ? [] 
-        : availableRuns.map(run => run.runId)
+        : availableRuns.map(run => run.id)
     );
   };
 
   const handleAggregateAll = async () => {
     setIsAggregating(true);
     
-    // Simulate API call
     try {
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await apiInstance.post("/federated/aggregate/");
       
       toast({
         title: "Aggregation Completed",
@@ -104,6 +99,7 @@ const Aggregation = () => {
       });
       
       setSelectedRuns([]);
+      await fetchGlobalQTables();
     } catch (error) {
       toast({
         title: "Aggregation Failed",
@@ -128,7 +124,7 @@ const Aggregation = () => {
     setIsAggregating(true);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await apiInstance.post("/federated/aggregate/", { selected_ids: selectedRuns });
       
       toast({
         title: "Aggregation Completed",
@@ -136,6 +132,7 @@ const Aggregation = () => {
       });
       
       setSelectedRuns([]);
+      await fetchGlobalQTables();
     } catch (error) {
       toast({
         title: "Aggregation Failed",
@@ -148,30 +145,24 @@ const Aggregation = () => {
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle className="h-4 w-4 text-success" />;
-      case "failed":
-        return <XCircle className="h-4 w-4 text-destructive" />;
-      case "running":
-        return <Clock className="h-4 w-4 text-warning animate-spin" />;
-      default:
-        return null;
-    }
+    return <CheckCircle className="h-4 w-4 text-success" />;
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <Badge className="bg-success text-success-foreground">Completed</Badge>;
-      case "failed":
-        return <Badge variant="destructive">Failed</Badge>;
-      case "running":
-        return <Badge className="bg-warning text-warning-foreground">Running</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    return <Badge className="bg-success text-success-foreground">Completed</Badge>;
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Clock className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -218,8 +209,8 @@ const Aggregation = () => {
               </p>
               <div className="flex flex-wrap gap-2">
                 {availableRuns.slice(0, 4).map((run) => (
-                  <Badge key={run.runId} variant="outline" className="text-xs">
-                    {run.clientId}
+                  <Badge key={run.id} variant="outline" className="text-xs">
+                    {run.client_email}
                   </Badge>
                 ))}
                 {availableRuns.length > 4 && (
@@ -240,20 +231,26 @@ const Aggregation = () => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-3 bg-muted/30 rounded-lg">
-                <p className="text-2xl font-bold text-success">12</p>
-                <p className="text-xs text-muted-foreground">Completed Today</p>
+                <p className="text-2xl font-bold text-success">{recentAggregations.length}</p>
+                <p className="text-xs text-muted-foreground">Total Aggregations</p>
               </div>
               <div className="text-center p-3 bg-muted/30 rounded-lg">
-                <p className="text-2xl font-bold text-foreground">94.7%</p>
-                <p className="text-xs text-muted-foreground">Best Performance</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {recentAggregations.length > 0 
+                    ? `${(recentAggregations[0].performance_score).toFixed(1)}%`
+                    : "N/A"}
+                </p>
+                <p className="text-xs text-muted-foreground">Latest Performance</p>
               </div>
             </div>
             <div className="pt-2 border-t border-border">
               <p className="text-sm text-muted-foreground">
-                Last aggregation: 2 hours ago
+                {recentAggregations.length > 0 
+                  ? `Last aggregation: ${formatDate(recentAggregations[0].aggregated_at)}`
+                  : "No aggregations yet"}
               </p>
               <p className="text-sm text-muted-foreground">
-                Average aggregation time: 3.2 minutes
+                Available client Q-tables: {availableRuns.length}
               </p>
             </div>
           </CardContent>
@@ -292,39 +289,41 @@ const Aggregation = () => {
               <TableRow className="bg-muted/30">
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedRuns.length === availableRuns.length}
+                    checked={selectedRuns.length === availableRuns.length && availableRuns.length > 0}
                     onCheckedChange={handleSelectAll}
                     className="border-border"
                   />
                 </TableHead>
-                <TableHead className="font-semibold text-foreground">Client ID</TableHead>
+                <TableHead className="font-semibold text-foreground">Client Email</TableHead>
                 <TableHead className="font-semibold text-foreground">Run ID</TableHead>
-                <TableHead className="font-semibold text-foreground">Timestamp</TableHead>
-                <TableHead className="font-semibold text-foreground">Performance</TableHead>
+                <TableHead className="font-semibold text-foreground">Uploaded At</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {availableRuns.map((run) => (
-                <TableRow key={run.runId} className="hover:bg-muted/20 transition-quick">
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedRuns.includes(run.runId)}
-                      onCheckedChange={() => handleSelectRun(run.runId)}
-                      className="border-border"
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium text-primary">{run.clientId}</TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">
-                    {run.runId.slice(0, 8)}...
-                  </TableCell>
-                  <TableCell className="text-sm">{run.timestamp}</TableCell>
-                  <TableCell>
-                    <span className="font-medium text-success">
-                      {(run.performance * 100).toFixed(1)}%
-                    </span>
+              {availableRuns.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                    No client Q-tables available
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                availableRuns.map((run) => (
+                  <TableRow key={run.id} className="hover:bg-muted/20 transition-quick">
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedRuns.includes(run.id)}
+                        onCheckedChange={() => handleSelectRun(run.id)}
+                        className="border-border"
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium text-primary">{run.client_email}</TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {run.run_id.slice(0, 8)}...
+                    </TableCell>
+                    <TableCell className="text-sm">{formatDate(run.uploaded_at)}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -340,35 +339,39 @@ const Aggregation = () => {
             <TableHeader>
               <TableRow className="bg-muted/30">
                 <TableHead className="font-semibold text-foreground">Aggregation ID</TableHead>
-                <TableHead className="font-semibold text-foreground">Timestamp</TableHead>
+                <TableHead className="font-semibold text-foreground">Aggregated At</TableHead>
                 <TableHead className="font-semibold text-foreground">Status</TableHead>
-                <TableHead className="font-semibold text-foreground">Clients</TableHead>
-                <TableHead className="font-semibold text-foreground">Final Score</TableHead>
+                <TableHead className="font-semibold text-foreground">Performance Score</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentAggregations.map((agg) => (
-                <TableRow key={agg.id} className="hover:bg-muted/20 transition-quick">
-                  <TableCell className="font-medium text-primary">{agg.id}</TableCell>
-                  <TableCell className="text-sm">{agg.timestamp}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(agg.status)}
-                      {getStatusBadge(agg.status)}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{agg.clientsIncluded}</TableCell>
-                  <TableCell>
-                    {agg.finalScore ? (
-                      <span className="font-medium text-success">
-                        {(agg.finalScore * 100).toFixed(1)}%
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
+              {recentAggregations.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                    No aggregations yet
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                recentAggregations.map((agg) => (
+                  <TableRow key={agg.id} className="hover:bg-muted/20 transition-quick">
+                    <TableCell className="font-medium text-primary font-mono text-sm">
+                      {agg.id.slice(0, 8)}...
+                    </TableCell>
+                    <TableCell className="text-sm">{formatDate(agg.aggregated_at)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon("completed")}
+                        {getStatusBadge("completed")}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium text-success">
+                        {(agg.performance_score).toFixed(1)}%
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

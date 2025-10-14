@@ -9,6 +9,7 @@ import {
   TestTube,
   TrendingUp,
   UserCheck,
+  Eye,
 } from "lucide-react";
 
 import {
@@ -27,6 +28,7 @@ const navigation = [
   { title: "Dashboard", url: "/", icon: BarChart3 },
   { title: "Clients", url: "/clients", icon: Users },
   { title: "Global Q-Tables", url: "/global-tables", icon: Database },
+  { title: "Observe", url: "/observe", icon: Eye },
   { title: "Testing", url: "/testing", icon: TestTube },
   { title: "Analytics", url: "/analytics", icon: TrendingUp },
   { title: "Team", url: "/team", icon: UserCheck },

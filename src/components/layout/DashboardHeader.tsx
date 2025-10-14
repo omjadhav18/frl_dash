@@ -25,16 +25,6 @@ export function DashboardHeader() {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex items-center gap-3">
-        <Button className="gradient-primary text-white shadow-glow hover:shadow-strong transition-smooth">
-          Start Demo
-        </Button>
-        <Button variant="outline" className="border-primary text-primary hover:bg-primary/10 transition-smooth">
-          Start Training
-        </Button>
-      </div>
-
       <div className="flex items-center gap-3">
         {/* Notifications */}
         <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
@@ -54,14 +44,7 @@ export function DashboardHeader() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 bg-popover border-border">
-            <DropdownMenuItem className="hover:bg-accent hover:text-accent-foreground transition-quick">
-              <User className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="hover:bg-accent hover:text-accent-foreground transition-quick">
-              Settings
-            </DropdownMenuItem>
           <DropdownMenuItem 
               className="hover:bg-destructive hover:text-destructive-foreground transition-quick"
               onClick={() => window.location.href = '/login'}

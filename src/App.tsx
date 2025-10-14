@@ -7,6 +7,7 @@ import DashboardLayout from "./components/layout/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import GlobalTables from "./pages/GlobalTables";
+import Observe from "./pages/Observe";
 import Testing from "./pages/Testing";
 import Analytics from "./pages/Analytics";
 import Team from "./pages/Team";
@@ -34,6 +35,7 @@ const App = () => (
             <Route index element={<Dashboard />} />
             <Route path="clients" element={<Clients />} />
             <Route path="global-tables" element={<GlobalTables />} />
+            <Route path="observe" element={<Observe />} />
             <Route path="testing" element={<Testing />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="team" element={<Team />} />
