@@ -8,7 +8,7 @@ const refresh_token: string | undefined = Cookies.get("refresh_token");
 console.log("Access Token:", access_token);
 
 const apiInstanceAuth: AxiosInstance = axios.create({
-  baseURL: "http://localhost:8000/api/v1/",
+  baseURL: "https://frl-server.onrender.com/api/v1/",
   timeout: 10000, // 10 seconds
   headers: {
     "Content-Type": "application/json",
