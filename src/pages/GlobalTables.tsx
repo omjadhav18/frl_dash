@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import apiInstance from "@/utils/axios";
+import apiInstance from "@/utils/axiosall";
 
 interface GlobalQTable {
   id: string;

@@ -1,4 +1,4 @@
-import { Bell, User } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
@@ -9,8 +9,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { logout } from "@/utils/auth";
+import { useNavigate } from "react-router-dom";
 
 export function DashboardHeader() {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm px-6 flex items-center justify-between">
       <div className="flex items-center gap-4">
@@ -45,9 +54,9 @@ export function DashboardHeader() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 bg-popover border-border">
             <DropdownMenuSeparator />
-          <DropdownMenuItem 
+            <DropdownMenuItem 
               className="hover:bg-destructive hover:text-destructive-foreground transition-quick"
-              onClick={() => window.location.href = '/login'}
+              onClick={handleLogout}
             >
               Logout
             </DropdownMenuItem>

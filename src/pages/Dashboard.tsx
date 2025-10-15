@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Users, PlayCircle, Database, TrendingUp } from "lucide-react";
 import { MetricCard } from "@/components/dashboard/MetricCard";
-import apiInstance from "@/utils/axios";
+import apiInstance from "@/utils/axiosall";
 
 interface SummaryCounts {
   federated_runs: number;

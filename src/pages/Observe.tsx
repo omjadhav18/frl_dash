@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import apiInstance from "@/utils/axios";
+import apiInstance from "@/utils/axiosall";
 
 interface FederatedRun {
   id: string;

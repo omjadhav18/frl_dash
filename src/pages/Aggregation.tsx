@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import apiInstance from "@/utils/axios";
+import apiInstance from "@/utils/axiosall";
 
 interface ClientQTable {
   id: string;

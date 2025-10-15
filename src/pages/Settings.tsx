@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Save, RefreshCw } from "lucide-react";
+import { Save, RefreshCw, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import apiInstance from "@/utils/axiosall";
 
 const Settings = () => {
   const [settings, setSettings] = useState({
@@ -25,6 +26,7 @@ const Settings = () => {
     notificationsEnabled: true,
     retentionDays: "30",
   });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { toast } = useToast();
 
@@ -61,6 +63,54 @@ const Settings = () => {
       title: "Settings Reset",
       description: "All settings have been reset to default values.",
     });
+  };
+
+  const handleDeleteAllFederatedData = async () => {
+    if (!window.confirm("Are you sure you want to delete all federated data? This action is IRREVERSIBLE and will permanently delete all client Q-tables and training data.")) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await apiInstance.delete("/federated/cleanup/delete_all/");
+      
+      toast({
+        title: "Federated Data Deleted",
+        description: "All federated data has been permanently deleted.",
+      });
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete federated data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteGlobalQTables = async () => {
+    if (!window.confirm("Are you sure you want to delete all global Q-tables? This action is IRREVERSIBLE and will permanently delete all aggregated models.")) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await apiInstance.delete("/federated/cleanup/delete_global_qtables/");
+      
+      toast({
+        title: "Global Q-Tables Deleted",
+        description: "All global Q-tables have been permanently deleted.",
+      });
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete global Q-tables. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -271,6 +321,67 @@ const Settings = () => {
                 </Button>
                 <Button variant="outline" size="sm" className="transition-smooth">
                   System Health Check
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Danger Zone */}
+        <Card className="shadow-soft border-destructive">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-2">
+              <p className="text-sm font-medium text-destructive">⚠️ Warning: Irreversible Actions</p>
+              <p className="text-xs text-muted-foreground">
+                These operations will permanently delete data from the system. 
+                There is no way to recover deleted data. Please proceed with extreme caution.
+              </p>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-foreground">Delete All Federated Data</h4>
+                <p className="text-xs text-muted-foreground">
+                  Permanently deletes all client Q-tables, training data, and federated learning history. 
+                  This will remove all client contributions from the system.
+                </p>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleDeleteAllFederatedData}
+                  disabled={isDeleting}
+                  className="transition-smooth"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {isDeleting ? "Deleting..." : "Delete All Federated Data"}
+                </Button>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-foreground">Delete Global Q-Tables</h4>
+                <p className="text-xs text-muted-foreground">
+                  Permanently deletes all aggregated global Q-tables and model snapshots. 
+                  This will remove all global models created through aggregation.
+                </p>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleDeleteGlobalQTables}
+                  disabled={isDeleting}
+                  className="transition-smooth"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {isDeleting ? "Deleting..." : "Delete Global Q-Tables"}
                 </Button>
               </div>
             </div>

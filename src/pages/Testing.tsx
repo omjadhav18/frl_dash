@@ -21,7 +21,7 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import apiInstance from "@/utils/axios";
+import apiInstance from "@/utils/axiosall";
 
 const Testing = () => {
   const [isTestRunning, setIsTestRunning] = useState(false);
